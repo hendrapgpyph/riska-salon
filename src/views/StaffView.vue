@@ -74,6 +74,7 @@ async function addStaff() {
       name,
       is_admin: false,
       is_active: true,
+      email : email
     })
 
     if (dbError) throw dbError

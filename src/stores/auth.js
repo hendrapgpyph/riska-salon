@@ -18,17 +18,16 @@ export const useAuthStore = defineStore('auth', () => {
   async function applySession(next) {
     session.value = next
     user.value = next?.user ?? null
-    
+
     if (user.value?.id) {
       // Ambil profil public berdasarkan nama (case-insensitive)
-      const rawName = user.value.user_metadata?.name || String(user.value.email).split('@')[0]
       try {
         const { data, error } = await supabase
           .from('staff')
           .select('*')
-          .ilike('name', rawName)
+          .eq('user_id', user.value?.id)
           .single()
-          
+
         if (!error && data) {
           if (data.is_active === false) {
             // Akun dinonaktifkan
@@ -46,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
           session.value = null
           user.value = null
           profile.value = null
-          throw err 
+          throw err
         }
       }
     } else {
@@ -102,7 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function resetPassword(email) {
     const e = String(email).trim().toLowerCase()
     if (!e) throw new Error('Email wajib diisi.')
-    
+
     // Alamat tujuan redirect ketika pengguna mengeklik link di email mereka
     const redirectUrl = `${window.location.origin}/reset-password`
     return await supabase.auth.resetPasswordForEmail(e, {
