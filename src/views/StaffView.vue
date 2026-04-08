@@ -68,13 +68,14 @@ async function addStaff() {
     if (!user) {
       throw new Error('Gagal mendaur user (user tidak dikembalikan).')
     }
-
+    
     // Insert ke public.staff tanpa atribut email & id
     const { error: dbError } = await supabase.from('staff').insert({
       name,
       is_admin: false,
       is_active: true,
-      email : email
+      email : email,
+      user_id: user.id
     })
 
     if (dbError) throw dbError
