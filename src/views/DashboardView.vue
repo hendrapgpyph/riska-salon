@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   LogOut,
@@ -120,7 +120,7 @@ async function loadTransactions() {
   loadError.value = ''
   loading.value = true
   try {
-    const rows = await fetchTransactionsFromSheet()
+    const rows = await fetchTransactionsFromSheet(year.value)
     allRows.value = rows
   } catch (e) {
     loadError.value = e?.message ?? 'Gagal memuat data dari Google Sheets.'
@@ -158,6 +158,11 @@ function onTouchEnd() {
 }
 
 onMounted(() => {
+  loadTransactions()
+})
+
+// Otomatis muat ulang data saat tahun diganti
+watch(year, () => {
   loadTransactions()
 })
 
@@ -235,18 +240,6 @@ const pullHintOpacity = computed(() =>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="sr-only" for="bulan">Bulan</label>
-            <select
-              id="bulan"
-              v-model.number="month"
-              class="w-full min-h-14 rounded-xl border border-pink-200 bg-white px-3 text-base font-medium text-pink-950 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-            >
-              <option v-for="opt in monthOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <div>
             <label class="sr-only" for="tahun">Tahun</label>
             <select
               id="tahun"
@@ -255,6 +248,18 @@ const pullHintOpacity = computed(() =>
             >
               <option v-for="y in yearOptions" :key="y" :value="y">
                 {{ y }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="sr-only" for="bulan">Bulan</label>
+            <select
+              id="bulan"
+              v-model.number="month"
+              class="w-full min-h-14 rounded-xl border border-pink-200 bg-white px-3 text-base font-medium text-pink-950 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+            >
+              <option v-for="opt in monthOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
               </option>
             </select>
           </div>
