@@ -1,0 +1,22 @@
+{
+  "name": "Riska Salon",
+  "short_name": "Riska Salon",
+  "description": "Aplikasi pencatatan transaksi Riska Salon",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#e7b9c4",
+  "background_color": "#fdf8f9",
+  "icons": [
+    {
+      "src": "/pwa-192x192.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/pwa-512x512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
