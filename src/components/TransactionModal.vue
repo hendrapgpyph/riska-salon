@@ -23,6 +23,16 @@ const errorMsg = ref('')
 
 const serviceNameInput = ref('')
 const price = ref('')
+const formattedPrice = computed({
+  get: () => {
+    if (!price.value) return ''
+    return Number(price.value).toLocaleString('id-ID')
+  },
+  set: (val) => {
+    // Ambil hanya angka saja
+    price.value = val.replace(/\D/g, '')
+  }
+})
 const keterangan = ref('')
 const selectedStaffIds = ref([])
 
@@ -321,14 +331,16 @@ defineExpose({ save, hapus })
 
           <div>
             <label class="block text-sm font-medium text-pink-900 mb-2">Harga</label>
-            <input
-              v-model="price"
-              type="number"
-              min="0"
-              step="1"
-              class="w-full min-h-14 rounded-xl border border-pink-200 px-4 text-lg text-pink-950 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-              placeholder="0"
-            />
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-pink-400 font-medium">Rp</span>
+              <input
+                v-model="formattedPrice"
+                type="text"
+                inputmode="numeric"
+                class="w-full min-h-14 rounded-xl border border-pink-200 pl-12 pr-4 text-lg text-pink-950 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+                placeholder="0"
+              />
+            </div>
           </div>
 
           <div>
