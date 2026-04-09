@@ -114,8 +114,8 @@ async function toggleActive(staff) {
 </script>
 
 <template>
-  <div class="min-h-dvh bg-gradient-to-b from-pink-50 via-white to-rose-50/60 pb-10">
-    <header class="sticky top-0 z-40 border-b border-pink-200/60 bg-gradient-to-r from-pink-100/90 via-white/95 to-pink-50/90 backdrop-blur shadow-sm shadow-pink-100/50">
+  <div class="h-dvh bg-gradient-to-b from-pink-50 via-white to-rose-50/60 flex flex-col overflow-hidden">
+    <header class="border-b border-pink-200/60 bg-gradient-to-r from-pink-100/90 via-white/95 to-pink-50/90 backdrop-blur shadow-sm shadow-pink-100/50 shrink-0">
       <div class="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <button
@@ -137,7 +137,7 @@ async function toggleActive(staff) {
       </div>
     </header>
 
-    <main class="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <main class="flex-1 overflow-y-auto max-w-lg mx-auto w-full px-4 py-6 space-y-6 pb-20">
       
       <!-- Error Message -->
       <div v-if="errorMsg" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">

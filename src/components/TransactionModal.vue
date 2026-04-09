@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { X } from 'lucide-vue-next'
 import { supabase } from '@/lib/supabase'
-import { getGoogleScriptRequestUrl } from '@/lib/googleScriptUrl'
+import { addTransaction, editTransaction, deleteTransaction } from '@/lib/googleSheets'
 import flatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
 import { Indonesian } from 'flatpickr/dist/l10n/id.js'
@@ -184,32 +184,20 @@ async function save() {
     const staffNames = staffList.value
       .filter((s) => selectedStaffIds.value.includes(String(s.id)))
       .map((s) => s.name)
-      // .join(', ') tidak ada, dikirim sebagai Array
-
-    const sheetUrl = getGoogleScriptRequestUrl()
-    if (!sheetUrl) {
-      throw new Error('URL Google Script belum diatur di .env')
-    }
 
     const payload = {
-      action: props.transactionData ? 'edit' : 'add',
       id: props.transactionData?.id || Date.now().toString(),
       tanggal: transactionDate.value,
       jasa: name,
       harga: priceNum,
-      staff: staffNames, // staffNames adalah array: ["Hendra", "Riska"]
+      staff: staffNames,
       keterangan: keterangan.value?.trim() || ''
     }
 
-    const res = await fetch(sheetUrl, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'text/plain' }, 
-      body: JSON.stringify(payload),
-    })
-
-    if (!res.ok) {
-      throw new Error(`Data gagal disimpan ke Spreadsheet (${res.status}).`)
+    if (props.transactionData) {
+      await editTransaction(payload)
+    } else {
+      await addTransaction(payload)
     }
 
     emit('saved')
@@ -229,24 +217,12 @@ async function hapus() {
   saving.value = true
   errorMsg.value = ''
   try {
-    const sheetUrl = getGoogleScriptRequestUrl()
-    if (!sheetUrl) throw new Error('URL Google Script belum diatur di .env')
+    const tahun = t.transaction_date ? String(t.transaction_date).substring(0, 4) : new Date().getFullYear()
 
-    const payload = {
-      action: 'delete',
-      id: String(t.id)
-    }
-
-    const res = await fetch(sheetUrl, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload),
+    await deleteTransaction({
+      id: String(t.id),
+      tahun
     })
-
-    if (!res.ok) {
-      throw new Error(`Gagal menghapus di Spreadsheet (${res.status}).`)
-    }
 
     emit('deleted')
     close()

@@ -1,8 +1,8 @@
-import { getGoogleScriptRequestUrl } from '@/lib/googleScriptUrl'
-
-// Ambil config dari env
-const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY
-const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID
+// Firebase Cloud Function URLs (v2 = individual Cloud Run URLs)
+const FB_GET_TRANSACTIONS = import.meta.env.VITE_FB_GET_TRANSACTIONS
+const FB_ADD_TRANSACTION = import.meta.env.VITE_FB_ADD_TRANSACTION
+const FB_EDIT_TRANSACTION = import.meta.env.VITE_FB_EDIT_TRANSACTION
+const FB_DELETE_TRANSACTION = import.meta.env.VITE_FB_DELETE_TRANSACTION
 
 const DATE_KEYS = ['transaction_date', 'tanggal', 'tgl', 'date']
 const SERVICE_KEYS = ['service_name', 'jasa', 'layanan']
@@ -81,66 +81,76 @@ export function normalizeSheetRow(row, index) {
 }
 
 /**
- * GET DATA (CEPAT) - Menggunakan API v4
+ * GET DATA — via Firebase Cloud Function
  */
 export async function fetchTransactionsFromSheet(tahun) {
-  const sheetName = String(tahun || new Date().getFullYear())
-  // Range A:H sesuai struktur: ID, Tanggal, Jasa, Harga, Staff 1, Staff 2, Staff 3, Keterangan
-  const range = `${sheetName}!A:H`
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`
+  const year = String(tahun || new Date().getFullYear())
+  const url = `${FB_GET_TRANSACTIONS}?tahun=${year}`
 
   try {
     const res = await fetch(url)
 
     if (!res.ok) {
-      // Cek apakah sheet belum ada (INVALID_ARGUMENT)
-      const errJson = await res.json().catch(() => null)
-      if (errJson?.error?.status === 'INVALID_ARGUMENT') {
-        // Sheet untuk tahun ini belum dibuat, kembalikan kosong
-        return []
-      }
-      throw new Error(`Sheets API Error: ${res.status}`)
+      throw new Error(`Firebase Function Error: ${res.status}`)
     }
 
-    const json = await res.json()
-    const values = json.values
+    const rows = await res.json()
 
-    if (!values || values.length <= 1) return []
+    if (!rows || rows.length === 0) return []
 
-    // Index kolom berdasarkan strukturmu:
-    // 0:ID, 1:Tanggal, 2:Jasa, 3:Harga, 4:Staff 1, 5:Staff 2, 6:Staff 3, 7:Keterangan
-    return values.slice(1).map((row, i) => {
-      const rowObj = {
-        id: row[0],
-        tanggal: row[1],
-        jasa: row[2],
-        harga: row[3],
-        // Ambil kolom 4, 5, 6 dan bersihkan jika kosong
-        staff: [row[4], row[5], row[6]].filter(s => s && String(s).trim() !== ""),
-        keterangan: row[7]
-      }
-
-      return normalizeSheetRow(rowObj, i)
-    })
+    return rows.map((row, i) => normalizeSheetRow(row, i))
   } catch (e) {
-    console.error('Gagal ambil data cepat:', e)
+    console.error('Gagal ambil data dari Firebase:', e)
     throw e
   }
 }
 
 /**
- * POST/EDIT/DELETE - Tetap gunakan Apps Script
+ * ADD TRANSACTION — via Firebase Cloud Function
  */
-export async function sendToGoogleScript(payload) {
-  const url = getGoogleScriptRequestUrl()
-  if (!url) throw new Error('VITE_GOOGLE_SCRIPT_URL belum diset.')
-
-  return fetch(url, {
+export async function addTransaction(payload) {
+  const res = await fetch(FB_ADD_TRANSACTION, {
     method: 'POST',
-    // Gunakan mode cors jika Apps Script sudah diset Anyone
-    mode: 'cors',
-    body: JSON.stringify(payload)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Gagal menambah transaksi (${res.status})`)
+  }
+  return res.json()
+}
+
+/**
+ * EDIT TRANSACTION — via Firebase Cloud Function
+ */
+export async function editTransaction(payload) {
+  const res = await fetch(FB_EDIT_TRANSACTION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Gagal mengedit transaksi (${res.status})`)
+  }
+  return res.json()
+}
+
+/**
+ * DELETE TRANSACTION — via Firebase Cloud Function
+ */
+export async function deleteTransaction(payload) {
+  const res = await fetch(FB_DELETE_TRANSACTION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Gagal menghapus transaksi (${res.status})`)
+  }
+  return res.json()
 }
 
 export function filterByMonthYear(rows, start, end) {

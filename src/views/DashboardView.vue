@@ -190,8 +190,8 @@ const pullHintOpacity = computed(() =>
 </script>
 
 <template>
-  <div class="min-h-dvh bg-gradient-to-b from-pink-50 via-white to-rose-50/60 flex flex-col">
-    <header class="sticky top-0 z-40 border-b border-pink-200/60 bg-gradient-to-r from-pink-100/90 via-white/95 to-pink-50/90 backdrop-blur shrink-0 shadow-sm shadow-pink-100/50">
+  <div class="h-dvh bg-gradient-to-b from-pink-50 via-white to-rose-50/60 flex flex-col overflow-hidden">
+    <header class="border-b border-pink-200/60 bg-gradient-to-r from-pink-100/90 via-white/95 to-pink-50/90 backdrop-blur shrink-0 shadow-sm shadow-pink-100/50">
       <div class="max-w-lg mx-auto px-4 pt-4 pb-3">
         <div class="flex items-start justify-between gap-3 mb-4">
           <div class="flex items-center gap-3">
@@ -344,7 +344,7 @@ const pullHintOpacity = computed(() =>
       </section>
     </div>
 
-    <footer class="sticky bottom-0 z-30 border-t border-pink-200 bg-white/95 backdrop-blur shrink-0">
+    <footer class="border-t border-pink-200 bg-white/95 backdrop-blur shrink-0">
       <div class="max-w-lg mx-auto px-4 py-4">
         <p class="text-xs font-medium text-pink-700/90 uppercase tracking-wide">Total pendapatan</p>
         <p class="text-3xl sm:text-4xl font-extrabold text-pink-900 tabular-nums tracking-tight">
