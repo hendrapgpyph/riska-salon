@@ -22,11 +22,18 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value?.id) {
       // Ambil profil public berdasarkan nama (case-insensitive)
       try {
-        const { data, error } = await supabase
+        // Tambahkan timeout 10 detik agar tidak "hang" selamanya jika koneksi tidak stabil
+        const profilePromise = supabase
           .from('staff')
           .select('*')
           .eq('user_id', user.value?.id)
           .single()
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT_PROFILE_FETCH')), 10000)
+        )
+
+        const { data, error } = await Promise.race([profilePromise, timeoutPromise])
 
         if (!error && data) {
           if (data.is_active === false) {
@@ -38,8 +45,8 @@ export const useAuthStore = defineStore('auth', () => {
           profile.value = null
         }
       } catch (err) {
-        console.error('Failed or blocked loading profile:', err)
-        // Force signOut jika inaktif
+        console.error('[Auth] Failed or blocked loading profile:', err)
+        // Force signOut jika inaktif atau timeout berulang (opsional)
         if (err.message.includes('dinonaktifkan')) {
           await supabase.auth.signOut()
           session.value = null
@@ -67,16 +74,36 @@ export const useAuthStore = defineStore('auth', () => {
           const { data } = await supabase.auth.getSession()
           await applySession(data.session)
         } catch (e) {
-          console.error(e)
+          console.error('[Auth] Init Session Error:', e)
         } finally {
           ready.value = true
         }
+
         supabase.auth.onAuthStateChange(async (event, nextSession) => {
+          console.log('[Auth] Event Change:', event)
           await applySession(nextSession)
           if (event === 'PASSWORD_RECOVERY') {
             window.location.href = '/reset-password'
           }
         })
+
+        // FIXED: Menangani PWA "hang" saat bangun dari background
+        if (typeof document !== 'undefined') {
+          document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+              console.log('[Auth] App Visible - Resyncing session...')
+              try {
+                const { data } = await supabase.auth.getSession()
+                if (data?.session) {
+                  await applySession(data.session)
+                }
+              } catch (err) {
+                console.error('[Auth] Wakeup Sync Error:', err)
+              }
+            }
+          })
+        }
+
         initialized.value = true
       })()
     }
