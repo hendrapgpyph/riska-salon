@@ -25,8 +25,14 @@ function getValueCI(row, candidates) {
 export function parseMoneyId(value) {
   if (value == null || value === '') return 0
   if (typeof value === 'number' && Number.isFinite(value)) return value
-  const digits = String(value).replace(/\D/g, '')
-  return digits ? Number(digits) : 0
+  
+  const strVal = String(value).trim()
+  const isNegative = strVal.startsWith('-') || (strVal.startsWith('(') && strVal.endsWith(')'))
+  const digits = strVal.replace(/\D/g, '')
+  
+  if (!digits) return 0
+  const num = Number(digits)
+  return isNegative ? -num : num
 }
 
 function toLocalYMD(d) {

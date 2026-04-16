@@ -11,6 +11,7 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import TransactionModal from '@/components/TransactionModal.vue'
+import ExpenseModal from '@/components/ExpenseModal.vue'
 import {
   fetchTransactionsFromSheet,
   filterByMonthYear,
@@ -28,16 +29,27 @@ const allRows = ref([])
 const loading = ref(false)
 const loadError = ref('')
 const modalOpen = ref(false)
+const expenseModalOpen = ref(false)
 const selectedTransaction = ref(null)
+const filterType = ref('semua')
 
 function openModalNew() {
   selectedTransaction.value = null
   modalOpen.value = true
 }
 
+function openExpenseModalNew() {
+  selectedTransaction.value = null
+  expenseModalOpen.value = true
+}
+
 function openModalEdit(t) {
   selectedTransaction.value = t
-  modalOpen.value = true
+  if (t.price < 0) {
+    expenseModalOpen.value = true
+  } else {
+    modalOpen.value = true
+  }
 }
 
 const scrollEl = ref(null)
@@ -65,13 +77,27 @@ const range = computed(() => {
   return { start, end }
 })
 
-const transactions = computed(() =>
-  filterByMonthYear(allRows.value, range.value.start, range.value.end)
-)
+const transactions = computed(() => {
+  let list = filterByMonthYear(allRows.value, range.value.start, range.value.end)
+  if (filterType.value === 'pemasukan') {
+    list = list.filter((t) => t.price >= 0)
+  } else if (filterType.value === 'pengeluaran') {
+    list = list.filter((t) => t.price < 0)
+  }
+  return list
+})
 
-const totalPendapatan = computed(() =>
-  transactions.value.reduce((sum, t) => sum + Number(t.price) || 0, 0)
-)
+const displayedTotal = computed(() => {
+  const sum = transactions.value.reduce((acc, t) => acc + (Number(t.price) || 0), 0)
+  // Kembalikan absolut jika filter pengeluaran saja agar tampilannya lebih rapi ("Total Pengeluaran: 50.000")
+  return filterType.value === 'pengeluaran' ? Math.abs(sum) : sum
+})
+
+const displayedTotalLabel = computed(() => {
+  if (filterType.value === 'pemasukan') return 'Total Pemasukan'
+  if (filterType.value === 'pengeluaran') return 'Total Pengeluaran'
+  return 'Total'
+})
 
 const groupedByDate = computed(() => {
   const map = new Map()
@@ -84,7 +110,13 @@ const groupedByDate = computed(() => {
   return [...map.entries()]
     .sort((a, b) => String(b[0]).localeCompare(String(a[0])))
     .map(([date, items]) => {
-      const sortedItems = [...items].sort((a, b) => String(a.id).localeCompare(String(b.id)))
+      const sortedItems = [...items].sort((a, b) => {
+        const aIsIncome = (Number(a.price) || 0) >= 0;
+        const bIsIncome = (Number(b.price) || 0) >= 0;
+        if (aIsIncome && !bIsIncome) return -1;
+        if (!aIsIncome && bIsIncome) return 1;
+        return String(a.id).localeCompare(String(b.id));
+      })
       const dailyTotal = sortedItems.reduce((acc, t) => acc + (Number(t.price) || 0), 0)
       return {
         date,
@@ -234,10 +266,10 @@ const pullHintOpacity = computed(() =>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 text-pink-800 mb-2">
+        <!-- <div class="flex items-center gap-2 text-pink-800 mb-2">
           <CalendarDays class="h-4 w-4 shrink-0" />
           <span class="text-sm font-medium">Filter periode</span>
-        </div>
+        </div> -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="sr-only" for="tahun">Tahun</label>
@@ -263,6 +295,19 @@ const pullHintOpacity = computed(() =>
               </option>
             </select>
           </div>
+        </div>
+
+        <div class="mt-3 flex rounded-xl border border-pink-200/60 bg-pink-50/50 p-1">
+          <button
+            v-for="type in ['semua', 'pemasukan', 'pengeluaran']"
+            :key="type"
+            type="button"
+            class="flex-1 py-1.5 text-sm font-semibold rounded-lg capitalize transition-colors"
+            :class="filterType === type ? 'bg-white shadow-sm text-pink-800 border border-pink-100' : 'text-pink-600/70 hover:text-pink-800'"
+            @click="filterType = type"
+          >
+            {{ type }}
+          </button>
         </div>
       </div>
       
@@ -334,8 +379,11 @@ const pullHintOpacity = computed(() =>
                     {{ t.keterangan }}
                   </p>
                 </div>
-                <p class="shrink-0 text-base font-bold text-pink-700 tabular-nums">
-                  {{ formatRupiah(t.price) }}
+                <p
+                  class="shrink-0 text-base font-bold tabular-nums"
+                  :class="t.price < 0 ? 'text-rose-600' : 'text-pink-700'"
+                >
+                  {{ t.price < 0 ? '- ' : '' }}{{ formatRupiah(Math.abs(t.price)) }}
                 </p>
               </div>
             </li>
@@ -346,31 +394,51 @@ const pullHintOpacity = computed(() =>
 
     <footer class="border-t border-pink-200 bg-white/95 backdrop-blur shrink-0">
       <div class="max-w-lg mx-auto px-4 py-4">
-        <p class="text-xs font-medium text-pink-700/90 uppercase tracking-wide">Total pendapatan</p>
+        <p class="text-xs font-medium text-pink-700/90 uppercase tracking-wide">{{ displayedTotalLabel }}</p>
         <p class="text-3xl sm:text-4xl font-extrabold text-pink-900 tabular-nums tracking-tight">
-          {{ formatRupiah(totalPendapatan) }}
+          {{ formatRupiah(displayedTotal) }}
         </p>
         <p class="text-xs text-pink-700/70 mt-1">
-          {{ monthOptions.find((m) => m.value === month)?.label }} {{ year }} · dari Google Sheets
+          {{ monthOptions.find((m) => m.value === month)?.label }} {{ year }}
         </p>
       </div>
     </footer>
 
-    <button
-      type="button"
-      class="fixed bottom-24 right-4 z-50 min-h-16 min-w-16 rounded-2xl bg-pink-600 text-white shadow-xl shadow-pink-700/30 flex items-center justify-center active:scale-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-2"
-      title="Transaksi baru"
-      aria-label="Tambah transaksi"
-      @click="openModalNew"
-    >
-      <Plus class="h-8 w-8" stroke-width="2.5" />
-    </button>
+    <div class="fixed bottom-5 right-4 z-50 flex flex-col gap-3">
+      <button
+        type="button"
+        class="min-h-14 min-w-14 sm:min-h-16 sm:min-w-16 rounded-2xl bg-rose-600 text-white shadow-xl shadow-rose-700/30 flex items-center justify-center active:scale-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+        title="Pengeluaran baru"
+        aria-label="Tambah pengeluaran"
+        @click="openExpenseModalNew"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7 sm:h-8 sm:w-8"><path d="M5 12h14"/></svg>
+      </button>
+      <button
+        type="button"
+        class="min-h-14 min-w-14 sm:min-h-16 sm:min-w-16 rounded-2xl bg-pink-600 text-white shadow-xl shadow-pink-700/30 flex items-center justify-center active:scale-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-2"
+        title="Pemasukan baru"
+        aria-label="Tambah pemasukan"
+        @click="openModalNew"
+      >
+        <Plus class="h-7 w-7 sm:h-8 sm:w-8" stroke-width="2.5" />
+      </button>
+    </div>
 
     <TransactionModal
       :open="modalOpen"
       :user-id="userId"
       :transaction-data="selectedTransaction"
       @close="modalOpen = false"
+      @saved="onModalSaved"
+      @deleted="onModalSaved"
+    />
+
+    <ExpenseModal
+      :open="expenseModalOpen"
+      :user-id="userId"
+      :transaction-data="selectedTransaction"
+      @close="expenseModalOpen = false"
       @saved="onModalSaved"
       @deleted="onModalSaved"
     />
