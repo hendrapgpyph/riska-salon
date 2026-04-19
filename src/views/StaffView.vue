@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase, createAdminClient } from '@/lib/supabase'
-import { Users, ArrowLeft, RefreshCw, UserPlus, Power } from 'lucide-vue-next'
+import { Users, ArrowLeft, RefreshCw, UserPlus, Power, Key, Link2, Copy, ExternalLink, X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -14,6 +14,14 @@ const newName = ref('')
 const newEmail = ref('')
 const newPassword = ref('')
 const saving = ref(false)
+
+const isChangingPassword = ref(false)
+const changePasswordData = ref({
+  show: false,
+  staffId: '',
+  staffName: '',
+  newPassword: ''
+})
 
 async function loadStaff() {
   loading.value = true
@@ -111,6 +119,42 @@ async function toggleActive(staff) {
     alert(err?.message ?? `Gagal ${action} staff.`)
   }
 }
+
+function prepareChangePassword(staff) {
+  changePasswordData.value = {
+    show: true,
+    staffId: staff.user_id,
+    staffName: staff.name,
+    newPassword: ''
+  }
+}
+
+async function changePassword() {
+  const newPass = changePasswordData.value.newPassword.trim()
+  if (!newPass) {
+    alert('Password baru wajib diisi.')
+    return
+  }
+
+  isChangingPassword.value = true
+  
+  try {
+    const adminAuth = createAdminClient()
+    const { data, error } = await adminAuth.auth.admin.updateUserById(
+      changePasswordData.value.staffId,
+      { password: newPass }
+    )
+
+    if (error) throw error
+
+    alert('Password berhasil diubah!')
+    changePasswordData.value.show = false
+  } catch (err) {
+    alert(err?.message ?? 'Gagal mengubah password. Pastikan VITE_SUPABASE_SERVICE_ROLE_KEY tersedia di .env')
+  } finally {
+    isChangingPassword.value = false
+  }
+}
 </script>
 
 <template>
@@ -132,7 +176,7 @@ async function toggleActive(staff) {
         </div>
       </div>
       <!-- Indeterminate Loading Bar -->
-      <div v-show="loading || saving" class="absolute bottom-0 left-0 right-0 h-[2.5px] bg-pink-100 overflow-hidden">
+      <div v-show="loading || saving || isChangingPassword" class="absolute bottom-0 left-0 right-0 h-[2.5px] bg-pink-100 overflow-hidden">
         <div class="h-full bg-pink-500 w-full origin-left animate-indeterminate"></div>
       </div>
     </header>
@@ -238,18 +282,75 @@ async function toggleActive(staff) {
               </div>
             </div>
             
-            <button
-              type="button"
-              class="min-h-10 min-w-10 flex items-center justify-center rounded-xl border transition"
-              :class="staff.is_active ? 'border-rose-200 text-rose-600 hover:bg-rose-50' : 'border-pink-200 text-pink-600 hover:bg-pink-50'"
-              title="Aktif/Nonaktifkan"
-              @click="toggleActive(staff)"
-            >
-              <Power class="h-4 w-4" />
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="min-h-10 min-w-10 flex items-center justify-center rounded-xl border border-pink-200 text-pink-600 hover:bg-pink-50 transition"
+                title="Ubah Password"
+                @click="prepareChangePassword(staff)"
+                :disabled="!staff.is_active || isChangingPassword"
+              >
+                <Key class="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                class="min-h-10 min-w-10 flex items-center justify-center rounded-xl border transition"
+                :class="staff.is_active ? 'border-rose-200 text-rose-600 hover:bg-rose-50' : 'border-pink-200 text-pink-600 hover:bg-pink-50'"
+                title="Aktif/Nonaktifkan"
+                @click="toggleActive(staff)"
+              >
+                <Power class="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </li>
       </ul>
+
+      <!-- Change Password Modal -->
+      <div v-if="changePasswordData.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/40 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-pink-100">
+          <div class="p-5 flex items-center justify-between border-b border-pink-100/60 bg-pink-50/50">
+            <h3 class="font-bold text-pink-950 inline-flex items-center gap-2">
+              <Key class="h-5 w-5 text-pink-600" />
+              Ubah Password
+            </h3>
+            <button @click="changePasswordData.show = false" class="p-2 -mr-2 text-pink-400 hover:text-pink-600 rounded-full hover:bg-pink-100/50 transition">
+              <X class="h-5 w-5" />
+            </button>
+          </div>
+          <form @submit.prevent="changePassword" class="p-5 space-y-4">
+            <p class="text-sm text-pink-800 leading-relaxed">
+              Masukkan password baru untuk staff <span class="font-bold text-pink-950">{{ changePasswordData.staffName }}</span>:
+            </p>
+            <div>
+              <input
+                v-model="changePasswordData.newPassword"
+                type="text"
+                required
+                placeholder="••••••••"
+                class="w-full min-h-12 rounded-xl border border-pink-200 bg-white px-3 text-base font-medium text-pink-950 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+              />
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button
+                type="button"
+                @click="changePasswordData.show = false"
+                class="w-1/3 min-h-11 rounded-xl border border-pink-200 bg-white text-pink-700 font-semibold active:bg-pink-50 transition text-sm disabled:opacity-60"
+                :disabled="isChangingPassword"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                class="w-2/3 min-h-11 rounded-xl bg-pink-600 text-white font-semibold shadow-md shadow-pink-600/30 active:scale-[0.99] transition text-sm disabled:opacity-60"
+                :disabled="isChangingPassword"
+              >
+                {{ isChangingPassword ? 'Menyimpan...' : 'Simpan Password' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
     </main>
   </div>
