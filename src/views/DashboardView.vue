@@ -392,7 +392,7 @@ const pullHintOpacity = computed(() =>
       </section>
     </div>
 
-    <footer class="border-t border-pink-200 bg-white/95 backdrop-blur shrink-0">
+    <footer class="border-t border-pink-200 bg-white/95 backdrop-blur shrink-0" v-if="auth.isAdmin">
       <div class="max-w-lg mx-auto px-4 py-4">
         <p class="text-xs font-medium text-pink-700/90 uppercase tracking-wide">{{ displayedTotalLabel }}</p>
         <p class="text-3xl sm:text-4xl font-extrabold text-pink-900 tabular-nums tracking-tight">
