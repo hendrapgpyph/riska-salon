@@ -6,10 +6,9 @@ const path = require("path");
 setGlobalOptions({maxInstances: 10});
 
 // ── Auth & Sheets client ─────────────────────────
-const SPREADSHEET_ID =
-    "19w3p-UQj8vQs_Df9ZOA__wQdjuJwRDr70EnKqGJWfII";
+const SPREADSHEET_ID = "1zZwVkrPfnl1Ea2d3n-p3AH8GGhk-iuqpuVV6rDsfcnk";
 const SERVICE_ACCOUNT_PATH =
-    path.join(__dirname, "service-account.json");
+  path.join(__dirname, "service-account.json");
 const fnOpts = {cors: true, invoker: "public"};
 
 /**
@@ -108,18 +107,19 @@ exports.getTransactions = onRequest(
         }
 
         const tahun = req.query.tahun ||
-            new Date().getFullYear();
+        new Date().getFullYear();
         const sheetName = String(tahun);
         const range = `${sheetName}!A:H`;
         const sheets = getSheetsClient();
 
         const result =
-            await sheets.spreadsheets.values.get({
-              spreadsheetId: SPREADSHEET_ID,
-              range,
-            });
+        await sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range,
+        });
 
         const values = result.data.values;
+        console.log(values);
         if (!values || values.length <= 1) {
           return res.json([]);
         }
@@ -140,9 +140,9 @@ exports.getTransactions = onRequest(
         return res.json(rows);
       } catch (err) {
         const errMsg = err && err.errors &&
-            err.errors[0] && err.errors[0].message;
+        err.errors[0] && err.errors[0].message;
         if (errMsg &&
-            errMsg.includes("Unable to parse range")) {
+        errMsg.includes("Unable to parse range")) {
           return res.json([]);
         }
         console.error("getTransactions error:", err);
@@ -187,7 +187,7 @@ exports.addTransaction = onRequest(
         }
 
         const body = typeof req.body === "string" ?
-          JSON.parse(req.body) : req.body;
+        JSON.parse(req.body) : req.body;
         const {
           id, tanggal, jasa, harga,
           staff, keterangan,
@@ -214,18 +214,18 @@ exports.addTransaction = onRequest(
               sheets, sheetName,
           );
         } catch (e) {
-          // Sheet belum ada, buat baru
+        // Sheet belum ada, buat baru
           const addRes =
-              await sheets.spreadsheets.batchUpdate({
-                spreadsheetId: SPREADSHEET_ID,
-                requestBody: {
-                  requests: [{
-                    addSheet: {
-                      properties: {title: sheetName},
-                    },
-                  }],
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: {
+              requests: [{
+                addSheet: {
+                  properties: {title: sheetName},
                 },
-              });
+              }],
+            },
+          });
           sheetId = addRes.data.replies[0]
               .addSheet.properties.sheetId;
 
@@ -248,7 +248,7 @@ exports.addTransaction = onRequest(
         }
 
         const staffArr = Array.isArray(staff) ?
-          staff : [];
+        staff : [];
         const rowId = id || Date.now().toString();
 
         const newRow = [
@@ -295,7 +295,7 @@ exports.editTransaction = onRequest(
         }
 
         const body = typeof req.body === "string" ?
-          JSON.parse(req.body) : req.body;
+        JSON.parse(req.body) : req.body;
         const {
           id, tanggal, jasa, harga,
           staff, keterangan,
@@ -321,7 +321,7 @@ exports.editTransaction = onRequest(
         }
 
         const staffArr = Array.isArray(staff) ?
-          staff : [];
+        staff : [];
         const updatedRow = [
           id,
           tanggal,
@@ -336,7 +336,7 @@ exports.editTransaction = onRequest(
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range:
-            `${sheetName}!A${rowIndex}:H${rowIndex}`,
+          `${sheetName}!A${rowIndex}:H${rowIndex}`,
           valueInputOption: "RAW",
           requestBody: {values: [updatedRow]},
         });
@@ -369,7 +369,7 @@ exports.deleteTransaction = onRequest(
         }
 
         const body = typeof req.body === "string" ?
-          JSON.parse(req.body) : req.body;
+        JSON.parse(req.body) : req.body;
         const {id, tahun} = body;
 
         if (!id) {
@@ -379,7 +379,7 @@ exports.deleteTransaction = onRequest(
         }
 
         const year = tahun ||
-            new Date().getFullYear();
+        new Date().getFullYear();
         const sheetName = String(year);
         const sheets = getSheetsClient();
 
